@@ -8,7 +8,7 @@ var http = require('http'),
 http.createServer(function (req, res) {
   var subdomain = (req.headers.host.split('.'))[0];
   console.log('detected subdomain "'+subdomain+'"');
-
+function proxyServe(req, res, backHost, backPath, backPort) {
   var dataStr = '';
   req.on('data', function(chunk) {
     dataStr += chunk;
@@ -17,10 +17,10 @@ http.createServer(function (req, res) {
   req.on('end', function() {
     console.log('A:END');
     var options = {
-      'host': subdomain+'.'+config.couch.parentDomain,
-      'port': config.couch.port,
+      'host': backHost,
+      'port': backPort,
       'method': req.method,
-      'path': req.url,
+      'path': backPath,
       'headers': req.headers
     };
     if(req.method=='OPTIONS') {
@@ -78,16 +78,11 @@ http.createServer(function (req, res) {
       req2.write(dataStr);
       req2.end();
     }
-  });
-}).listen(config.backends.proxy);
-console.log('listening on '+config.backends.proxy);
-
 
   /////////////////////////////////////////////
  // webfinger + CouchDB init + oauth dialog //
 /////////////////////////////////////////////
 
-(function() {
   var http = require('http'),
     cradle = require('cradle'),
     fs = require('fs'),
