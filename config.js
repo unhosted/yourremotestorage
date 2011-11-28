@@ -1,9 +1,8 @@
 exports.config = {
-  front: {
-    port: 80
-  }
+  port: 80,
   back: {
-    port: 5984,
-    api: 'CouchDB'
+    CouchDB: {
+      port: 5984
+    }
   }
 };
