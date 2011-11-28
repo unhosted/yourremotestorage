@@ -138,9 +138,9 @@ exports.handler = (function() {
       cb(pwd);
     });
   }
-  function createScope(userName, password, clientId, dataScope, public, cb) {
-    console.log('connecting to host '+userName+'.'+config.couch.parentDomain);
-    var conn = new(cradle.Connection)(userName+'.'+config.couch.parentDomain, config.couch.port, {
+  function createScope(couchAddress, userName, password, clientId, dataScope, public, cb) {
+    console.log('connecting to host '+couchAddress);
+    var conn = new(cradle.Connection)(couchAddress, config.couch.port, {
       cache: true, raw: false,
       auth: {username: userName, password: password}
     });
@@ -187,20 +187,20 @@ exports.handler = (function() {
     });
   }
 
-  function createToken(userName, password, clientId, dataScope, cb) {
+  function createToken(couchAddress, userName, password, clientId, dataScope, cb) {
     var public = (dataScope == 'public');
-    createScope(userName, password, clientId, dataScope, public, function(password) {
+    createScope(couchAddress, userName, password, clientId, dataScope, public, function(password) {
       //make basic auth header match bearer token for easy proxying:
       var bearerToken = (new Buffer(clientId+':'+password)).toString('base64');
       console.log(bearerToken+' <= '+clientId+':'+password);
       cb(bearerToken);
     });
   }
-  function setAdminPwd(userName, password, cb) {
-    //console.log('connecting to '+userName+'.'+config.couch.parentDomain+':'+config.couch.port);
-    //var conn = new(cradle.Connection)(userName+'.'+config.couch.parentDomain, config.couch.port, {
-    console.log('connecting to '+userName+'.'+config.proxyParentDomain+':80');
-    var conn = new(cradle.Connection)(userName+'.'+config.proxyParentDomain, 80, {
+  function setAdminPwd(couchAddress, userName, password, cb) {
+    //console.log('connecting to '+couchAddress+':'+config.couch.port);
+    //var conn = new(cradle.Connection)(couchAddress, config.couch.port, {
+    console.log('connecting to '+couchAddress+':80');
+    var conn = new(cradle.Connection)(couchAddress, 80, {
       cache: true, raw: false
     });
     var configDb = conn.database('_config/admins');//note that cradle allows slashes in db names but not in doc names!
@@ -241,15 +241,15 @@ exports.handler = (function() {
   function serveRegister(req, res) {
     var urlObj = url.parse(req.url, true);
     console.log(urlObj);
-    var userName = urlObj.pathname.substring('/register/'.length);
+    var couchAddress = urlObj.pathname.substring('/CouchDB/register/'.length);
     res.writeHead(200, {'Content-Type': 'text/html'});
-    res.end('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Iris Couch password-setter proxy</title>\n'
-      +'</head><body>Welcome '+userName+'\n'
+    res.end('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>CouchDB password-setter proxy</title>\n'
+      +'</head><body>This proxy helps you set a password for '+couchAddress+'\n'
       +'<form method="GET" action="/doRegister">\n'
       +'  Pick a password: <input type="password" name="pwd1">\n'
       +'  Repeat: <input type="password" name="pwd2">\n'
       +'  <input type="submit">\n'
-      +'  <input type="hidden" name="userName" value="'+userName+'"><br>\n'
+      +'  <input type="hidden" name="couchAddress" value="'+couchAddress+'">\n'
       +'  <input type="hidden" name="redirect_uri" value="'+urlObj.query.redirect_uri+'"><br>\n'
       +'</form></body></html>');
   }
@@ -257,29 +257,30 @@ exports.handler = (function() {
     var urlObj = url.parse(req.url, true);
     console.log(urlObj);
     if(urlObj.query.pwd1==urlObj.query.pwd2) {
-      setAdminPwd(urlObj.query.userName, urlObj.query.pwd1, function() {
-        res.writeHead(302, {Location: urlObj.query.redirect_uri+'#userAddress='+encodeURIComponent(urlObj.query.userName+'@'+config.couch.parentDomain)});
+      setAdminPwd(urlObj.query.couchAddress, urlObj.query.userName, urlObj.query.pwd1, function() {
+        res.writeHead(302, {Location: urlObj.query.redirect_uri});
         res.end('Found');
       });
     } else {
       res.writeHead(200, {'Content-Type': 'text/html'});
-      res.end('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Iris Couch passwords differ</title>\n'
+      res.end('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>CouchDB passwords differ</title>\n'
       +'</head><body>Please enter the same password twice. <a href="/register/'
-      +urlObj.query.userName+'?redirect_uri='
+      +urlObj.query.couchAddress+'?redirect_uri='
       +urlObj.query.redirect_uri+'">try again</a>.\n'
       +'</body></html>');
     }
   }
   function serveAuth(req, res) {
     var urlObj = url.parse(req.url, true);
+    var couchAddress = urlObj.pathname.substring('/CouchDB/auth/'.length);
     console.log(urlObj);
     res.writeHead(200, {'Content-Type': 'text/html'});
     res.end('<html><form method="GET" action="/doAuth">\n'
-      +'  Your '+config.couch.parentDomain+' user: <input name="userName" value="'+urlObj.query.userName+'"><br>\n'
-      //+'  Your password:<input name="password" type="password" value="unhosted"><br>\n'
+      +'  Your user for '+couchAddress+': <input name="userName"><br>\n'
       +'  Your password:<input name="password" type="password" value=""><br>\n'
-      +'  <input type="hidden" name="redirect_uri" value="'+urlObj.query.redirect_uri+'"><br>\n'
-      +'  <input type="hidden" name="scope" value="'+urlObj.query.scope+'"><br>\n'
+      +'  <input type="hidden" name="redirect_uri" value="'+urlObj.query.redirect_uri+'">\n'
+      +'  <input type="hidden" name="couchAddress" value="'+couchAddress+'">\n'
+      +'  <input type="hidden" name="scope" value="'+urlObj.query.scope+'">\n'
       +'  <input type="submit" value="Allow this app to read and write on your couch"><br>\n'
       +'  <a target="_blank" href="http://github.com/unhosted/experiments/">If you have your own server or domain, host this proxy yourself!</a><br>\n'
       +'</form></html>\n');
@@ -297,7 +298,7 @@ exports.handler = (function() {
       }
     }
     console.log('Parsed redirect_uri to form clientId:'+clientId);
-    createToken(urlObj.query.userName, urlObj.query.password, clientId, urlObj.query.scope, function(token) {
+    createToken(urlObj.query.couchAddress, urlObj.query.userName, urlObj.query.password, clientId, urlObj.query.scope, function(token) {
       res.writeHead(302, {Location: urlObj.query.redirect_uri+'#access_token='+encodeURIComponent(token)});
       res.end('Found');
     });
@@ -308,13 +309,13 @@ exports.handler = (function() {
       serveHostMeta(req, res);
     } else if(req.url.substring(0, '/webfinger'.length)=='/webfinger') {
       serveLrdd(req, res);
-    } else if(req.url.substring(0, '/register'.length)=='/register') {
+    } else if(req.url.substring(0, '/CouchDB/register'.length)=='/CouchDB/register') {
       serveRegister(req, res);
-    } else if(req.url.substring(0, '/doRegister'.length)=='/doRegister') {
+      } else if(req.url.substring(0, '/CouchDB/doRegister'.length)=='/CouchDB/doRegister') {
       serveDoRegister(req, res);
-    } else if(req.url.substring(0, '/auth'.length)=='/auth') {
+    } else if(req.url.substring(0, '/CouchDB/auth'.length)=='/CouchDB/auth') {
       serveAuth(req, res);
-    } else if(req.url.substring(0, '/doAuth'.length)=='/doAuth') {
+    } else if(req.url.substring(0, '/CouchDB/doAuth'.length)=='/CouchDB/doAuth') {
       serveDoAuth(req, res);
     } else {
       res.writeHead(404, {'Content-Type': 'text/plain'});
