@@ -245,7 +245,7 @@ exports.handler = (function() {
     res.writeHead(200, {'Content-Type': 'text/html'});
     res.end('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>CouchDB password-setter proxy</title>\n'
       +'</head><body>This proxy helps you set a password for '+couchAddress+'\n'
-      +'<form method="GET" action="/doRegister">\n'
+      +'<form method="GET" action="/CouchDB/doRegister">\n'
       +'  Pick a password: <input type="password" name="pwd1">\n'
       +'  Repeat: <input type="password" name="pwd2">\n'
       +'  <input type="submit">\n'
@@ -275,7 +275,7 @@ exports.handler = (function() {
     var couchAddress = urlObj.pathname.substring('/CouchDB/auth/'.length);
     console.log(urlObj);
     res.writeHead(200, {'Content-Type': 'text/html'});
-    res.end('<html><form method="GET" action="/doAuth">\n'
+    res.end('<html><form method="GET" action="/CouchDB/doAuth">\n'
       +'  Your user for '+couchAddress+': <input name="userName"><br>\n'
       +'  Your password:<input name="password" type="password" value=""><br>\n'
       +'  <input type="hidden" name="redirect_uri" value="'+urlObj.query.redirect_uri+'">\n'
