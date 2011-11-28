@@ -12,7 +12,7 @@ exports.handler = (function() {
      // CORS proxy //
     ////////////////
 
-  function optionsServe(req, res) {
+  function optionsServe(req, res, dataStr) {
     var responseHeaders={}//should maybe get a base set from remote?
     var origin = req.headers.Origin;
     if(!origin) {
@@ -25,7 +25,7 @@ exports.handler = (function() {
     res.writeHead(200, responseHeaders);
     res.end();
   }
-  function onReturn(res2) {
+  function onReturn(res2, req, res) {
     var responseHeaders = res2.headers;
     console.log('\nC.HEADERS:'+JSON.stringify(responseHeaders));
     var origin = req.headers.Origin;
@@ -48,7 +48,8 @@ exports.handler = (function() {
       res.end();
     });
   }
-  function throughServe(req, res, backHost, backPath, backPort, options) {
+  function throughServe(req, res, backHost, backPath, backPort, options, dataStr) {
+    console.log('throughServe(req, res, '+backHost+', '+backPath+', '+backPort+', options);');
     //stop the remote server getting confused trying to serve a vhost for the proxy's url instead of its own one:
     options.headers.host = options.host;
 
@@ -63,13 +64,21 @@ exports.handler = (function() {
     }
 
     console.log('\nB.OPTIONS:'+JSON.stringify(options));
-    var req2 = http.request(options, onReturn);
+    var req2 = http.request(options, function(res2) {
+      onReturn(res2, req, res);
+    });
     //console.log('example.DATA:'+JSON.stringify({ingredients:['bacon', 'cheese']}));
     console.log('B.DATA:'+dataStr);
     req2.write(dataStr);
     req2.end();
   }
-  function proxyServe(req, res, backHost, backPath, backPort) {
+  function serveProxy(req, res) {
+    var urlObj = url.parse(req.url, true);
+    var pathParts = urlObj.pathname.split('/');
+    var backHost = pathParts[3];
+    var backPath = '/'+pathParts.splice(4).join('/');
+    var backPort = 5984;
+    console.log('backend: "'+backHost+'", "'+backPath+'", '+backPort);
     var dataStr = '';
     req.on('data', function(chunk) {
       dataStr += chunk;
@@ -85,9 +94,9 @@ exports.handler = (function() {
         'headers': req.headers
       };
       if(req.method=='OPTIONS') {
-        optionsServe(req, res);
+        optionsServe(req, res, dataStr);
       } else {
-        throughServe(req, res, backHost, backPath, backPort, options);
+        throughServe(req, res, backHost, backPath, backPort, options, dataStr);
       }
     });
   }
@@ -303,7 +312,7 @@ exports.handler = (function() {
       res.end('Found');
     });
   }
-  function serveFacade(req, res) {
+  function serve(req, res) {
     console.log('checking url '+req.url.substring(0, '/register'.length));
     if(req.url=='/.well-known/host-meta') {
       serveHostMeta(req, res);
@@ -317,16 +326,11 @@ exports.handler = (function() {
       serveAuth(req, res);
     } else if(req.url.substring(0, '/CouchDB/doAuth'.length)=='/CouchDB/doAuth') {
       serveDoAuth(req, res);
+    } else if(req.url.substring(0, '/CouchDB/proxy'.length)=='/CouchDB/proxy') {
+      serveProxy(req, res);
     } else {
       res.writeHead(404, {'Content-Type': 'text/plain'});
       res.end('Not found\n');
-    }
-  }
-  function serve(req, res) {
-    if(true) {
-      serveFacade(req, res);
-    } else {
-      serveProxy(req, res);
     }
   }
 
