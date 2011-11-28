@@ -140,7 +140,7 @@ exports.handler = (function() {
   }
   function createScope(couchAddress, userName, password, clientId, dataScope, public, cb) {
     console.log('connecting to host '+couchAddress);
-    var conn = new(cradle.Connection)(couchAddress, config.couch.port, {
+    var conn = new(cradle.Connection)(couchAddress, config.back.CouchDB.port, {
       cache: true, raw: false,
       auth: {username: userName, password: password}
     });
@@ -197,8 +197,8 @@ exports.handler = (function() {
     });
   }
   function setAdminPwd(couchAddress, userName, password, cb) {
-    //console.log('connecting to '+couchAddress+':'+config.couch.port);
-    //var conn = new(cradle.Connection)(couchAddress, config.couch.port, {
+    //console.log('connecting to '+couchAddress+':'+config.back.CouchDB.port);
+    //var conn = new(cradle.Connection)(couchAddress, config.back.CouchDB.port, {
     console.log('connecting to '+couchAddress+':80');
     var conn = new(cradle.Connection)(couchAddress, 80, {
       cache: true, raw: false
@@ -282,7 +282,7 @@ exports.handler = (function() {
       +'  <input type="hidden" name="couchAddress" value="'+couchAddress+'">\n'
       +'  <input type="hidden" name="scope" value="'+urlObj.query.scope+'">\n'
       +'  <input type="submit" value="Allow this app to read and write on your couch"><br>\n'
-      +'  <a target="_blank" href="http://github.com/unhosted/experiments/">If you have your own server or domain, host this proxy yourself!</a><br>\n'
+      +'  <a target="_blank" href="http://github.com/unhosted/yourremotestorage/">If you have your own server or domain, host this proxy yourself!</a><br>\n'
       +'</form></html>\n');
   }
   function serveDoAuth(req, res) {
