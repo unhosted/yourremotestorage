@@ -206,13 +206,14 @@ exports.handler = (function() {
     });
   }
   function setAdminPwd(couchAddress, userName, password, cb) {
-    //console.log('connecting to '+couchAddress+':'+config.back.CouchDB.port);
-    //var conn = new(cradle.Connection)(couchAddress, config.back.CouchDB.port, {
-    console.log('connecting to '+couchAddress+':80');
-    var conn = new(cradle.Connection)(couchAddress, 80, {
+    console.log('connecting to '+couchAddress+':'+config.back.CouchDB.port);
+    var conn = new(cradle.Connection)(couchAddress, config.back.CouchDB.port, {
+    //console.log('connecting to '+couchAddress+':80');
+    //var conn = new(cradle.Connection)(couchAddress, 80, {
       cache: true, raw: false
     });
     var configDb = conn.database('_config/admins');//note that cradle allows slashes in db names but not in doc names!
+    console.log('setting _config/admins/'+userName+' to '+password);
     configDb.save(userName, password, function(err, res) {
       console.log('err:');
       console.log(err);
@@ -250,14 +251,21 @@ exports.handler = (function() {
   function serveRegister(req, res) {
     var urlObj = url.parse(req.url, true);
     console.log(urlObj);
-    var couchAddress = urlObj.pathname.substring('/CouchDB/register/'.length);
+    var pathNameParts = urlObj.pathname.split('/');
+    //var userName = pathNameParts[3];
+    //var couchAddress = pathNameParts.splice(4).join('/');
+    var userName = 'admin';
+    var couchAddress = pathNameParts.splice(3).join('/');
+    console.log('registering admin "'+userName+'" for '+couchAddress);
     res.writeHead(200, {'Content-Type': 'text/html'});
     res.end('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>CouchDB password-setter proxy</title>\n'
-      +'</head><body>This proxy helps you set a password for '+couchAddress+'\n'
+      +'</head><body>This proxy helps you create and "admin" user on '+couchAddress+' and set a password for it. If you prefer, you can also do this on\n'
+      +'<a href="http://'+couchAddress+':5984/_utils">http://'+couchAddress+':5984/_utils</a>.\n'
       +'<form method="GET" action="/CouchDB/doRegister">\n'
       +'  Pick a password: <input type="password" name="pwd1">\n'
       +'  Repeat: <input type="password" name="pwd2">\n'
       +'  <input type="submit">\n'
+      +'  <input type="hidden" name="userName" value="'+userName+'">\n'
       +'  <input type="hidden" name="couchAddress" value="'+couchAddress+'">\n'
       +'  <input type="hidden" name="redirect_uri" value="'+urlObj.query.redirect_uri+'"><br>\n'
       +'</form></body></html>');
@@ -273,7 +281,7 @@ exports.handler = (function() {
     } else {
       res.writeHead(200, {'Content-Type': 'text/html'});
       res.end('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>CouchDB passwords differ</title>\n'
-      +'</head><body>Please enter the same password twice. <a href="/register/'
+      +'</head><body>Please enter the same password twice. <a href="/CouchDB/register/'
       +urlObj.query.couchAddress+'?redirect_uri='
       +urlObj.query.redirect_uri+'">try again</a>.\n'
       +'</body></html>');
