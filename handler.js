@@ -293,7 +293,7 @@ exports.handler = (function() {
     console.log(urlObj);
     res.writeHead(200, {'Content-Type': 'text/html'});
     res.end('<html><form method="GET" action="/CouchDB/doAuth">\n'
-      +'  Your user for '+couchAddress+': <input name="userName"><br>\n'
+      +'  Your user for '+couchAddress+': <input name="userName" value="admin"><br>\n'
       +'  Your password:<input name="password" type="password" value=""><br>\n'
       +'  <input type="hidden" name="redirect_uri" value="'+urlObj.query.redirect_uri+'">\n'
       +'  <input type="hidden" name="couchAddress" value="'+couchAddress+'">\n'
