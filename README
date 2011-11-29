@@ -1,3 +1,9 @@
-To deploy changes to a nodejitsu:
-npm install -g jitsu
+Edit config.js to fit your needs, then...
+
+To run:
+-------
+sudo node server.js
+
+To deploy:
+----------
 jitsu deploy
