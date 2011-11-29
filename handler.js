@@ -12,7 +12,9 @@ exports.handler = (function() {
      // CORS proxy //
     ////////////////
 
+
   function optionsServe(req, res, dataStr) {
+    console.log('serving options');
     var responseHeaders={}//should maybe get a base set from remote?
     var origin = req.headers.Origin;
     if(!origin) {
@@ -26,6 +28,7 @@ exports.handler = (function() {
     res.end();
   }
   function onReturn(res2, req, res) {
+    console.log('onReturn');
     var responseHeaders = res2.headers;
     console.log('\nC.HEADERS:'+JSON.stringify(responseHeaders));
     var origin = req.headers.Origin;
@@ -40,9 +43,11 @@ exports.handler = (function() {
     res2.setEncoding('utf8');
     var res2Data = '';
     res2.on('data', function (chunk) {
+      console.log('onReturn: res2,on(data)');
       res2Data += chunk;
     });
     res2.on('end', function() {
+      console.log('onReturn: res2,on(end)');
       console.log('\nC.DATA:'+res2Data);
       res.write(res2Data);
       res.end();
@@ -73,6 +78,7 @@ exports.handler = (function() {
     req2.end();
   }
   function serveProxy(req, res) {
+    console.log('serveProxy');
     var urlObj = url.parse(req.url, true);
     var pathParts = urlObj.pathname.split('/');
     var backHost = pathParts[3];
@@ -81,10 +87,12 @@ exports.handler = (function() {
     console.log('backend: "'+backHost+'", "'+backPath+'", '+backPort);
     var dataStr = '';
     req.on('data', function(chunk) {
+      console.log('serveProxy: on(data)');
       dataStr += chunk;
       console.log('A:'+chunk);
     });
     req.on('end', function() {
+      console.log('serveProxy: on(end)');
       console.log('A:END');
       var options = {
         'host': backHost,
