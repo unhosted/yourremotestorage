@@ -293,12 +293,14 @@ exports.handler = (function() {
     var urlObj = url.parse(req.url, true);
     console.log(urlObj);
     var postData = '';
-    res.on('data', function(chunk) {
+    req.on('data', function(chunk) {
       postData += chunk;
     });
-    res.on('end', function() {
+    req.on('end', function() {
+      console.log(postData);
       var query = querystring.parse(postData);
       if(query.pwd1==query.pwd2) {
+        console.log('setAdminPwd("'+query.couchAddress+'", "'+query.userName+'", "'+query.pwd1+'", function() ...');
         setAdminPwd(query.couchAddress, query.userName, query.pwd1, function() {
           res.writeHead(302, {Location: query.redirect_uri});
           res.end('Found');
@@ -319,7 +321,10 @@ exports.handler = (function() {
     console.log(urlObj);
     res.writeHead(200, {'Content-Type': 'text/html'});
     res.end('<html><form method="POST" action="/CouchDB/doAuth">\n'
-      +'  Your user for '+couchAddress+': <input name="userName" value="admin"><br>\n'
+      +'  If this is the first time you use '+couchAddress+' then click <a href="http://yourremotestorage.net/CouchDB/register/'+couchAddress+'?redirect_uri='
+      +'http://yourremotestorage.net/CouchDB/auth/'+couchAddress+'">'
+      +'here</a> to initialize it. Otherwise, enter your credentials below:<br>\n'
+      +'  You user: <input name="userName" value="admin"><br>\n'
       +'  Your password:<input name="password" type="password" value=""><br>\n'
       +'  <input type="hidden" name="redirect_uri" value="'+urlObj.query.redirect_uri+'">\n'
       +'  <input type="hidden" name="couchAddress" value="'+couchAddress+'">\n'
