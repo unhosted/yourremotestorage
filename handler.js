@@ -26,8 +26,10 @@ exports.handler = (function() {
     responseHeaders['Access-Control-Allow-Credentials'] = 'true';
     res.writeHead(200, responseHeaders);
     res.end();
+    console.log('exit serving options');
   }
   function onReturn(res2, req, res) {
+    console.log('LOG: got reply status '+res2.statusCode);
     console.log('onReturn');
     var responseHeaders = res2.headers;
     console.log('\nC.HEADERS:'+JSON.stringify(responseHeaders));
@@ -45,12 +47,14 @@ exports.handler = (function() {
     res2.on('data', function (chunk) {
       console.log('onReturn: res2,on(data)');
       res2Data += chunk;
+      console.log('exit onReturn: res2,on(data)');
     });
     res2.on('end', function() {
       console.log('onReturn: res2,on(end)');
       console.log('\nC.DATA:'+res2Data);
       res.write(res2Data);
       res.end();
+      console.log('exit onReturn: res2,on(end)');
     });
   }
   function throughServe(req, res, backHost, backPath, backPort, options, dataStr) {
@@ -69,13 +73,16 @@ exports.handler = (function() {
     }
 
     console.log('\nB.OPTIONS:'+JSON.stringify(options));
+    
     var req2 = http.request(options, function(res2) {
       onReturn(res2, req, res);
     });
+
     //console.log('example.DATA:'+JSON.stringify({ingredients:['bacon', 'cheese']}));
     console.log('B.DATA:'+dataStr);
     req2.write(dataStr);
     req2.end();
+    console.log('exit throughServe');
   }
   function serveProxy(req, res) {
     console.log('serveProxy');
@@ -90,6 +97,7 @@ exports.handler = (function() {
       console.log('serveProxy: on(data)');
       dataStr += chunk;
       console.log('A:'+chunk);
+      console.log('exit serveProxy: on(data)');
     });
     req.on('end', function() {
       console.log('serveProxy: on(end)');
@@ -106,7 +114,9 @@ exports.handler = (function() {
       } else {
         throughServe(req, res, backHost, backPath, backPort, options, dataStr);
       }
+      console.log('exit serveProxy: on(end)');
     });
+    console.log('exit serveProxy');
   }
 
     /////////////////////////////////////////////
@@ -114,12 +124,6 @@ exports.handler = (function() {
   /////////////////////////////////////////////
 
 
-  Buffer.prototype.randomize = function() {
-    var fd = fs.openSync('/dev/urandom', 'r');
-    fs.readSync(fd, this, 0, this.length, 0);
-    fs.closeSync(fd);
-    return this;
-  }
   function str2sha(str) {
     var shasum = crypto.createHash('sha1');
     shasum.update(str);
@@ -127,8 +131,12 @@ exports.handler = (function() {
   } 
   function randStr(length) {
     var buffer = new Buffer(length);
-    buffer.randomize();
-    return buffer.toString('base64');
+    var fd = fs.openSync('/dev/urandom', 'r');
+    fs.readSync(fd, buffer, 0, buffer.length, 0);
+    fs.closeSync(fd);
+    var randStr = buffer.toString('base64');
+    console.log('generated randStr of length '+randStr.length+' ('+length+'):'+randStr);
+    return randStr;
   }
   function genUser(clientId, conn, cb) {
     console.log('Generating pwd');
@@ -209,7 +217,9 @@ exports.handler = (function() {
     createScope(couchAddress, userName, password, clientId, dataScope, public, function(password) {
       //make basic auth header match bearer token for easy proxying:
       var bearerToken = (new Buffer(clientId+':'+password)).toString('base64');
-      console.log(bearerToken+' <= '+clientId+':'+password);
+      console.log('bearerToken ('+bearerToken.length+'):'+bearerToken);
+      console.log('clientId ('+clientId.length+'): '+clientId);
+      console.log('password ('+password.length+'):'+password);
       cb(bearerToken);
     });
   }
@@ -314,7 +324,8 @@ exports.handler = (function() {
     var urlObj = url.parse(req.url, true);
     console.log(urlObj);
     var clientId = '';//don't trust the clientId that the RP claims - instead, derive it from redirect_uri:
-    for(var i in urlObj.query.redirect_uri) {
+    console.log('Basing clientId on redirect_uri of length '+urlObj.query.redirect_uri.length);
+    for(var i=0; i<urlObj.query.redirect_uri.length; i++) {
       var thisChar = urlObj.query.redirect_uri[i];
       if((thisChar >= 'a' && thisChar <= 'z') || (thisChar >= 'A' && thisChar <= 'Z')) {
         clientId += thisChar;
@@ -330,6 +341,7 @@ exports.handler = (function() {
   }
   function serve(req, res) {
     console.log('checking url '+req.url.substring(0, '/register'.length));
+    console.log('LOG:incoming '+req.method);
     if(req.url=='/.well-known/host-meta') {
       serveHostMeta(req, res);
     } else if(req.url.substring(0, '/webfinger'.length)=='/webfinger') {
@@ -348,6 +360,7 @@ exports.handler = (function() {
       res.writeHead(404, {'Content-Type': 'text/plain'});
       res.end('Not found\n');
     }
+    console.log('exit sync call to serve');
   }
 
   return {
