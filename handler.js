@@ -6,6 +6,7 @@ exports.handler = (function() {
     Buffer = require('buffer').Buffer,
     crypto = require('crypto'),
     url = require('url'),
+    querystring = require('querystring'),
     config = require('./config').config;
 
       ////////////////
@@ -279,7 +280,7 @@ exports.handler = (function() {
     res.end('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>CouchDB password-setter proxy</title>\n'
       +'</head><body>This proxy helps you create and "admin" user on '+couchAddress+' and set a password for it. If you prefer, you can also do this on\n'
       +'<a href="http://'+couchAddress+':5984/_utils">http://'+couchAddress+':5984/_utils</a>.\n'
-      +'<form method="GET" action="/CouchDB/doRegister">\n'
+      +'<form method="POST" action="/CouchDB/doRegister">\n'
       +'  Pick a password: <input type="password" name="pwd1">\n'
       +'  Repeat: <input type="password" name="pwd2">\n'
       +'  <input type="submit">\n'
@@ -291,26 +292,33 @@ exports.handler = (function() {
   function serveDoRegister(req, res) {
     var urlObj = url.parse(req.url, true);
     console.log(urlObj);
-    if(urlObj.query.pwd1==urlObj.query.pwd2) {
-      setAdminPwd(urlObj.query.couchAddress, urlObj.query.userName, urlObj.query.pwd1, function() {
-        res.writeHead(302, {Location: urlObj.query.redirect_uri});
-        res.end('Found');
-      });
-    } else {
-      res.writeHead(200, {'Content-Type': 'text/html'});
-      res.end('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>CouchDB passwords differ</title>\n'
-      +'</head><body>Please enter the same password twice. <a href="/CouchDB/register/'
-      +urlObj.query.couchAddress+'?redirect_uri='
-      +urlObj.query.redirect_uri+'">try again</a>.\n'
-      +'</body></html>');
-    }
+    var postData = '';
+    res.on('data', function(chunk) {
+      postData += chunk;
+    });
+    res.on('end', function() {
+      var query = querystring.parse(postData);
+      if(query.pwd1==query.pwd2) {
+        setAdminPwd(query.couchAddress, query.userName, query.pwd1, function() {
+          res.writeHead(302, {Location: query.redirect_uri});
+          res.end('Found');
+        });
+      } else {
+        res.writeHead(200, {'Content-Type': 'text/html'});
+        res.end('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>CouchDB passwords differ</title>\n'
+        +'</head><body>Please enter the same password twice. <a href="/CouchDB/register/'
+        +query.couchAddress+'?redirect_uri='
+        +query.redirect_uri+'">try again</a>.\n'
+        +'</body></html>');
+      }
+    });
   }
   function serveAuth(req, res) {
     var urlObj = url.parse(req.url, true);
     var couchAddress = urlObj.pathname.substring('/CouchDB/auth/'.length);
     console.log(urlObj);
     res.writeHead(200, {'Content-Type': 'text/html'});
-    res.end('<html><form method="GET" action="/CouchDB/doAuth">\n'
+    res.end('<html><form method="POST" action="/CouchDB/doAuth">\n'
       +'  Your user for '+couchAddress+': <input name="userName" value="admin"><br>\n'
       +'  Your password:<input name="password" type="password" value=""><br>\n'
       +'  <input type="hidden" name="redirect_uri" value="'+urlObj.query.redirect_uri+'">\n'
@@ -322,21 +330,29 @@ exports.handler = (function() {
   }
   function serveDoAuth(req, res) {
     var urlObj = url.parse(req.url, true);
-    console.log(urlObj);
-    var clientId = '';//don't trust the clientId that the RP claims - instead, derive it from redirect_uri:
-    console.log('Basing clientId on redirect_uri of length '+urlObj.query.redirect_uri.length);
-    for(var i=0; i<urlObj.query.redirect_uri.length; i++) {
-      var thisChar = urlObj.query.redirect_uri[i];
-      if((thisChar >= 'a' && thisChar <= 'z') || (thisChar >= 'A' && thisChar <= 'Z')) {
-        clientId += thisChar;
-      } else {
-        clientId += '_';//thisChar;
+    var postData = '';
+    req.on('data', function(chunk) {
+      postData += chunk;
+    });
+    req.on('end', function() {
+      var query = querystring.parse(postData);
+      console.log(urlObj);
+      console.log(query);
+      var clientId = '';//don't trust the clientId that the RP claims - instead, derive it from redirect_uri:
+      console.log('Basing clientId on redirect_uri of length '+query.redirect_uri.length);
+      for(var i=0; i<query.redirect_uri.length; i++) {
+        var thisChar = query.redirect_uri[i];
+        if((thisChar >= 'a' && thisChar <= 'z') || (thisChar >= 'A' && thisChar <= 'Z')) {
+          clientId += thisChar;
+        } else {
+          clientId += '_';//thisChar;
+        }
       }
-    }
-    console.log('Parsed redirect_uri to form clientId:'+clientId);
-    createToken(urlObj.query.couchAddress, urlObj.query.userName, urlObj.query.password, clientId, urlObj.query.scope, function(token) {
-      res.writeHead(302, {Location: urlObj.query.redirect_uri+'#access_token='+encodeURIComponent(token)});
-      res.end('Found');
+      console.log('Parsed redirect_uri to form clientId:'+clientId);
+      createToken(query.couchAddress, query.userName, query.password, clientId, query.scope, function(token) {
+        res.writeHead(302, {Location: query.redirect_uri+'#access_token='+encodeURIComponent(token)});
+        res.end('Found');
+      });
     });
   }
   function serve(req, res) {
