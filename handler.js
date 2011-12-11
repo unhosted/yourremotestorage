@@ -273,17 +273,17 @@ exports.handler = (function() {
     var pathNameParts = urlObj.pathname.split('/');
     //var userName = pathNameParts[3];
     //var couchAddress = pathNameParts.splice(4).join('/');
-    var userName = 'admin';
+    var userName = urlObj.query.userName;
     var couchAddress = pathNameParts.splice(3).join('/');
     console.log('registering admin "'+userName+'" for '+couchAddress);
     res.writeHead(200, {'Content-Type': 'text/html'});
     res.end('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>CouchDB password-setter proxy</title>\n'
-      +'</head><body>This proxy helps you create and "admin" user on '+couchAddress+' and set a password for it. If you prefer, you can also do this on\n'
+      +'</head><body>This proxy helps you create an "'+userName+'" user on '+couchAddress+' and set a password for it. If you prefer, you can also do this on\n'
       +'<a href="http://'+couchAddress+':5984/_utils">http://'+couchAddress+':5984/_utils</a>.\n'
       +'<form method="POST" action="/CouchDB/doRegister">\n'
       +'  Pick a password: <input type="password" name="pwd1">\n'
       +'  Repeat: <input type="password" name="pwd2">\n'
-      +'  <input type="submit">\n'
+      +'  <input type="submit" value="this will give an error, but it works">\n'
       +'  <input type="hidden" name="userName" value="'+userName+'">\n'
       +'  <input type="hidden" name="couchAddress" value="'+couchAddress+'">\n'
       +'  <input type="hidden" name="redirect_uri" value="'+urlObj.query.redirect_uri+'"><br>\n'
@@ -317,14 +317,16 @@ exports.handler = (function() {
   }
   function serveAuth(req, res) {
     var urlObj = url.parse(req.url, true);
-    var couchAddress = urlObj.pathname.substring('/CouchDB/auth/'.length);
+    var couchAndUser = urlObj.pathname.substring('/CouchDB/auth/'.length).split('/');
+    var couchAddress = couchAndUser[0];
+    var couchUser = couchAndUser[1];
     console.log(urlObj);
     res.writeHead(200, {'Content-Type': 'text/html'});
     res.end('<html><form method="POST" action="/CouchDB/doAuth">\n'
-      +'  If this is the first time you use '+couchAddress+' then click <a href="http://yourremotestorage.net/CouchDB/register/'+couchAddress+'?redirect_uri='
-      +'http://yourremotestorage.net/CouchDB/auth/'+couchAddress+'">'
+      +'  If this is the first time you use '+couchAddress+' then click <a href="http://yourremotestorage.net/CouchDB/register/'+couchAddress+'?userName='+couchUser+'&redirect_uri='
+      +'http://yourremotestorage.net/CouchDB/auth/'+couchAddress+'/'+couchUser+'">'
       +'here</a> to initialize it. Otherwise, enter your credentials below:<br>\n'
-      +'  You user: <input name="userName" value="admin"><br>\n'
+      +'  You user: <input name="userName" value="'+couchUser+'"><br>\n'
       +'  Your password:<input name="password" type="password" value=""><br>\n'
       +'  <input type="hidden" name="redirect_uri" value="'+urlObj.query.redirect_uri+'">\n'
       +'  <input type="hidden" name="couchAddress" value="'+couchAddress+'">\n'

@@ -12,7 +12,7 @@
   "scripts": {
     "start": "server.js"
   },
-  "version": "0.0.0-33",
+  "version": "0.0.0-34",
   "dependencies": {
     "cradle": ">= 0.5.7"
   }
