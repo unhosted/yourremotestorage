@@ -41,7 +41,11 @@ exports.handler = (function() {
     console.log('\nC.HEADERS:'+JSON.stringify(responseHeaders));
     var origin = req.headers.Origin;
     if(!origin) {
-      origin = '*';
+      origin = req.headers.origin;
+      if(!origin) {
+        console.log('no Origin header found!');
+        origin = '*';
+      }
     }
     responseHeaders['Access-Control-Allow-Origin'] = origin;
     responseHeaders['Access-Control-Allow-Methods'] = 'GET, PUT, POST, DELETE';
