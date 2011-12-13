@@ -19,7 +19,12 @@ exports.handler = (function() {
     var responseHeaders={}//should maybe get a base set from remote?
     var origin = req.headers.Origin;
     if(!origin) {
-      origin = '*';
+      origin = req.headers.origin;
+      if(!origin) {
+        console.log('no Origin header found!');
+        console.log(req.headers);
+        origin = '*';
+      }
     }
     responseHeaders['Access-Control-Allow-Origin'] = origin;
     responseHeaders['Access-Control-Allow-Methods'] = 'GET, PUT, POST, DELETE';
