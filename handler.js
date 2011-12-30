@@ -74,12 +74,22 @@ exports.handler = (function() {
 
     //cunning trick that works because of how our bearer tokens relate to our CouchDb passwords:
     if(options.headers['authorization']) {
-      var bearerToken = options.headers['authorization'].substring(('Bearer '.length));
-      options.headers['authorization'] = 'Basic '+bearerToken;
+      var token;
+      if(options.headers['authorization'].substring(0, ('Basic '.length)) == 'Basic ') {
+        token = options.headers['authorization'].substring(('Basic '.length));
+      } else{
+        token = options.headers['authorization'].substring(('Bearer '.length));
+      }
+      options.headers['authorization'] = 'Basic '+token;
     }
     if(options.headers['Authorization']) {
-      var bearerToken = options.headers['Authorization'].substring(('Bearer '.length));
-      options.headers['Authorization'] = 'Basic '+bearerToken;
+      var token;
+      if(options.headers['Authorization'].substring(0, ('Basic '.length)) == 'Basic ') {
+        token = options.headers['Authorization'].substring(('Basic '.length));
+      } else{
+        token = options.headers['Authorization'].substring(('Bearer '.length));
+      }
+      options.headers['Authorization'] = 'Basic '+token;
     }
 
     console.log('\nB.OPTIONS:'+JSON.stringify(options));
