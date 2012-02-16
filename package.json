@@ -2,10 +2,6 @@
   "name": "yourremotestorage",
   "subdomain": "yourremotestorage",
   "domains": [
-    "yourremotestorage.com",
-    "www.yourremotestorage.com",
-    "yourremotestorage.org",
-    "www.yourremotestorage.org",
     "yourremotestorage.net",
     "www.yourremotestorage.net"
   ],
